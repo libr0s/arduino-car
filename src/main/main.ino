@@ -28,7 +28,7 @@ class Button {
         released = true;
         lcd.clear();
         lcd.print(pin);
-        delay(500);
+        delay(200);
       } else {
         released = false;
       }
@@ -88,7 +88,7 @@ Button accelerator_button(28);
 Button brake_button(27);
 Button direction_button(26);
 Button startstop_button(25);
-Button changegear_button(22);
+Button changegear_button(24);
 
 // Car settings
 int state;
@@ -110,6 +110,7 @@ void setup()
   pinMode(startstop_button.pin, INPUT);
   pinMode(brake_button.pin, INPUT);
   pinMode(direction_button.pin, INPUT);
+  pinMode(changegear_button.pin, INPUT);
 
   pinMode(stop_signal_pin, OUTPUT);
   pinMode(light_pin, OUTPUT);
@@ -271,6 +272,7 @@ void updateButtonStates() {
   brake_button.updateButtonState();
   direction_button.updateButtonState();
   startstop_button.updateButtonState();
+  changegear_button.updateButtonState();
 };
 
 // Printing function for starting the engine
