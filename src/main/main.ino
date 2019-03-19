@@ -3,6 +3,10 @@
 
 // 1. INITIAL SETUP AND CONSTANTS
 
+// LCD pins setup
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
 // Reusable button class with utility methods
 class Button {
   public:
@@ -22,15 +26,18 @@ class Button {
 
       if (button_state == LOW && prev_state == HIGH) { // button release
         released = true;
+        lcd.clear();
+        lcd.print(pin);
+        delay(500);
       } else {
         released = false;
       }
     };
 };
 
-// LCD pins setup
-const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+// // LCD pins setup
+// const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+// LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 // Stop signal and light
 const int stop_signal_pin = 32;
@@ -81,6 +88,7 @@ Button accelerator_button(28);
 Button brake_button(27);
 Button direction_button(26);
 Button startstop_button(25);
+Button changegear_button(22);
 
 // Car settings
 int state;
@@ -88,6 +96,10 @@ int car_speed = 0;
 const int car_acceleration_step = 10;
 const int car_slow_down_step = 3;
 int car_direction = FORWARD;
+int car_gear = 2;
+
+// Car gears
+const int gearLimits[] = {50, 150, 255};
 
 // 2. MAIN APPLICATION
 
@@ -116,12 +128,12 @@ void loop()
   printInfo(); // displays information about state and speed on LCD screen
   updateButtonStates(); // updates data about buttons
   
+  // Check gear changes
+  if (changegear_button.released)
+    changeGear();
+
   // Adjusts speed of motor
   analogWrite(motor_enable_pin, car_speed);
-  if (car_speed != 0)
-    digitalWrite(DirectionMapping[car_direction], HIGH);
-  else
-    digitalWrite(DirectionMapping[car_direction], LOW);
   
   // Gradually decreases car speed so to maintain speed
   // or increase it, driver has to keep pressing accelerator_button
@@ -144,6 +156,7 @@ void loop()
     case START:
       printEngineStart();
       switchCarLights(light_pin, ON);
+      car_gear = 2;
       if (car_direction == FORWARD)
         state = FORWARD_IDLE;
       else
@@ -151,6 +164,8 @@ void loop()
       break;
 
     case FORWARD_IDLE:
+        digitalWrite(DirectionMapping[FORWARD], HIGH);
+        digitalWrite(DirectionMapping[BACKWARD], LOW);
       if (car_speed > 0)
         state = FORWARD_DRIVING;
       if (direction_button.released)
@@ -162,6 +177,8 @@ void loop()
         break;
 
     case BACKWARD_IDLE:
+        digitalWrite(DirectionMapping[BACKWARD], HIGH);
+        digitalWrite(DirectionMapping[FORWARD], LOW);
       if (car_speed > 0)
         state = BACKWARD_DRIVING;
       if (direction_button.released)
@@ -194,7 +211,7 @@ void loop()
       switchCarLights(stop_signal_pin, HIGH);
       car_speed = 0;
       if (brake_button.released) {
-        switchCarLights(stop_signal_pin, LOW);
+        switchCarLights(stop_signal_pin, OFF);
         if (car_direction == FORWARD)
           state = FORWARD_IDLE;
         else
@@ -212,7 +229,7 @@ void loop()
 // Function for increasing car speed by declared step
 int increaseCarSpeed(int step) {
   car_speed += step;
-  if (car_speed > 255) car_speed = 255;
+  if (car_speed > gearLimits[car_gear]) car_speed = gearLimits[car_gear];
 };
 
 // Function for slowing down the car by declared step
@@ -233,7 +250,9 @@ void printInfo() {
     lcd.setCursor(0, 1); // set cursor to bottom left
     String speed_message = String("Speed: ") + String(car_speed);
     lcd.print(speed_message);
-  } 
+
+    printGear();
+  }
 };
 
 // Function switching on or off diode of specific pin
@@ -267,4 +286,29 @@ void printEngineStart() {
   delay(1000);
   lcd.print(".");
   delay(1000);
+}
+
+// Lock LCD sign
+byte lock[8] = {
+  B00000,
+  B01110,
+  B10001,
+  B10001,
+  B11111,
+  B11111,
+  B11111,
+};
+
+// Change gear
+void changeGear() {
+  lcd.clear();
+  car_gear = (car_gear + 1) % 2;
+}
+
+// Printing function for displaying chosen gear
+void printGear() {
+  lcd.createChar(0, lock);
+  lcd.setCursor(12, 1);
+  lcd.write(byte(0));
+  lcd.print(gearLimits[car_gear]);
 }
