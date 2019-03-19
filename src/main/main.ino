@@ -1,16 +1,21 @@
-// include the library code for LCD:
+// Include the library code for LCD:
 #include <LiquidCrystal.h>
 
+// 1. INITIAL SETUP AND CONSTANTS
+
+// Reusable button class with utility methods
 class Button {
   public:
     int pin;
     int button_state = LOW;
     bool released = false;
 
+    // Simple constructor - only button pin has to be provided
     Button(int button_pin) {
       pin = button_pin;
     };
 
+    // Method updating state of pressing and releasing the button
     void updateButtonState() {
       int prev_state = button_state;
       button_state = digitalRead(pin);
@@ -27,35 +32,30 @@ class Button {
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
-//stop signal and light
+// Stop signal and light
 const int stop_signal_pin = 32;
 const int light_pin = 33;
 
-// DC motor pins
-const int8_t g_enable_pin = 9;
-const int8_t g_direction_a_pin = 8;
-const int8_t g_direction_b_pin = 7;
-
-// Car settings
-enum Direction {
-  BACKWARD = 0,
-  FORWARD = 1
-};
-
-const int8_t DirectionMapping[] = {g_direction_a_pin, g_direction_b_pin};
-
+// Lights enum
 enum LightState {
   OFF = 0,
   ON = 1
 };
 
-int car_speed = 0;
-int car_direction = FORWARD;
-const int car_acceleration_step = 10;
-const int car_slow_down_step = 2;
+// DC motor pins
+const int8_t motor_enable_pin = 9;
+const int8_t motor_direction_forward_pin = 8;
+const int8_t motor_direction_backward_pin = 7;
 
-// state machine
+// Directions
+enum Direction {
+  BACKWARD = 0,
+  FORWARD = 1
+};
 
+const int8_t DirectionMapping[] = {motor_direction_forward_pin, motor_direction_backward_pin};
+
+// State machine
 enum States {
   STOP = 0,
   START = 1,
@@ -76,17 +76,24 @@ char StateMap[][10] = {
   "BRAKING"
 };
 
-int state;
-
-//buttons(order from white light to stop signal
+// Buttons declaration and initialization
 Button accelerator_button(28);
 Button brake_button(27);
 Button direction_button(26);
 Button startstop_button(25);
 
+// Car settings
+int state;
+int car_speed = 0;
+const int car_acceleration_step = 10;
+const int car_slow_down_step = 3;
+int car_direction = FORWARD;
+
+// 2. MAIN APPLICATION
+
 void setup() 
 {
-  //set buttons and lights
+  // Set buttons and lights
   pinMode(accelerator_button.pin, INPUT);
   pinMode(startstop_button.pin, INPUT);
   pinMode(brake_button.pin, INPUT);
@@ -95,32 +102,32 @@ void setup()
   pinMode(stop_signal_pin, OUTPUT);
   pinMode(light_pin, OUTPUT);
 
-  // set up the LCD's number of columns and rows:
+  // Set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
 
-  // begin with STOP state (car is not running)
+  // Begin with STOP state (car is not running)
   state = STOP;
 }
 
 void loop() 
 {
-  // actions which happen independently from state
+  // Actions which happen independently from state
   delay(50);
   printInfo(); // displays information about state and speed on LCD screen
   updateButtonStates(); // updates data about buttons
   
-  // adjusts speed of motor
-  analogWrite(g_enable_pin, car_speed);
+  // Adjusts speed of motor
+  analogWrite(motor_enable_pin, car_speed);
   if (car_speed != 0)
     digitalWrite(DirectionMapping[car_direction], HIGH);
   else
     digitalWrite(DirectionMapping[car_direction], LOW);
   
-  // gradually decreases car speed so to maintain speed
+  // Gradually decreases car speed so to maintain speed
   // or increase it, driver has to keep pressing accelerator_button
   decreaseCarSpeed(car_slow_down_step);
 
-  // checking if car stopped here instead of almost in every state
+  // Checking if car stopped here (instead of almost in every state)
   if (startstop_button.released && state != STOP) {
     state = STOP;
     startstop_button.released = false;
@@ -200,16 +207,21 @@ void loop()
   }
 }
 
+// 3. UTILITY FUNCTIONS
+
+// Function for increasing car speed by declared step
 int increaseCarSpeed(int step) {
   car_speed += step;
   if (car_speed > 255) car_speed = 255;
 };
 
+// Function for slowing down the car by declared step
 int decreaseCarSpeed(int step) {
   car_speed -= step;
   if (car_speed < 0) car_speed = 0;
 };
 
+// Function handling updating info on LCD screen
 void printInfo() {
   lcd.clear(); // clear screen
 
@@ -224,6 +236,7 @@ void printInfo() {
   } 
 };
 
+// Function switching on or off diode of specific pin
 void switchCarLights(int light_pin, int light_state) {
   if(light_state == ON)
     digitalWrite(light_pin, HIGH);
@@ -233,6 +246,7 @@ void switchCarLights(int light_pin, int light_state) {
     Serial.print("Wrong light_state argument!");
 };
 
+// Function updating state of all used button
 void updateButtonStates() {
   accelerator_button.updateButtonState();
   brake_button.updateButtonState();
@@ -240,6 +254,7 @@ void updateButtonStates() {
   startstop_button.updateButtonState();
 };
 
+// Printing function for starting the engine
 void printEngineStart() {
   lcd.clear(); // clear screen
 
