@@ -3,10 +3,6 @@
 
 // 1. INITIAL SETUP AND CONSTANTS
 
-// LCD pins setup
-const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-
 // Reusable button class with utility methods
 class Button {
   public:
@@ -26,18 +22,15 @@ class Button {
 
       if (button_state == LOW && prev_state == HIGH) { // button release
         released = true;
-        lcd.clear();
-        lcd.print(pin);
-        delay(200);
       } else {
         released = false;
       }
     };
 };
 
-// // LCD pins setup
-// const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
-// LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+// LCD pins setup
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 // Stop signal and light
 const int stop_signal_pin = 32;
@@ -96,10 +89,10 @@ int car_speed = 0;
 const int car_acceleration_step = 10;
 const int car_slow_down_step = 3;
 int car_direction = FORWARD;
-int car_gear = 2;
+int car_gear = 0;
 
 // Car gears
-const int gearLimits[] = {50, 150, 255};
+const int gearLimits[] = {150, 200, 255};
 
 // 2. MAIN APPLICATION
 
@@ -157,7 +150,7 @@ void loop()
     case START:
       printEngineStart();
       switchCarLights(light_pin, ON);
-      car_gear = 2;
+      car_gear = 0;
       if (car_direction == FORWARD)
         state = FORWARD_IDLE;
       else
@@ -304,7 +297,7 @@ byte lock[8] = {
 // Change gear
 void changeGear() {
   lcd.clear();
-  car_gear = (car_gear + 1) % 2;
+  car_gear = (car_gear + 1) % 3;
 }
 
 // Printing function for displaying chosen gear
@@ -312,5 +305,5 @@ void printGear() {
   lcd.createChar(0, lock);
   lcd.setCursor(12, 1);
   lcd.write(byte(0));
-  lcd.print(gearLimits[car_gear]);
+  lcd.print(car_gear + 1);
 }
